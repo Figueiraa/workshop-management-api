@@ -14,7 +14,7 @@ MVP de sistema integrado para gestão de oficina mecânica, construído com Fast
 ### 1. Clone e acesse o projeto
 
 ```bash
-git clone <url-do-repositorio>
+git clone https://github.com/Figueiraa/workshop-management-api.git
 cd workshop-management-api
 ```
 
