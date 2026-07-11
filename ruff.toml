@@ -15,3 +15,4 @@ select = [
 "tests/*" = ["E501"]
 # Depends()/Query() em defaults é o padrão idiomático do FastAPI (B008 é falso positivo aqui).
 "app/interfaces/http/**" = ["B008"]
+"app/main.py" = ["B008"]

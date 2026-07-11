@@ -36,7 +36,11 @@ class AuthenticateUserUseCase:
 
     async def execute(self, username: str, password: str) -> str:
         user = await self._repo.get_by_username(username)
-        if not user or not self._hasher.verify(password, user.password_hash):
+        if not user:
+            # Mantém tempo de resposta constante — evita enumeração de usuários por latência.
+            self._hasher.dummy_verify(password)
+            raise UnauthorizedError()
+        if not self._hasher.verify(password, user.password_hash):
             raise UnauthorizedError()
         if not user.is_active:
             raise UnauthorizedError()

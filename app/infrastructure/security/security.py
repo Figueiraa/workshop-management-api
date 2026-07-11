@@ -9,6 +9,10 @@ from app.infrastructure.config import settings
 
 _password_hash = PasswordHash.recommended()
 
+# Hash descartável usado para manter tempo de resposta constante quando o usuário não existe,
+# impedindo enumeração de usuários por latência.
+_DUMMY_HASH = _password_hash.hash("dummy-password-for-constant-time")
+
 
 def hash_password(password: str) -> str:
     return _password_hash.hash(password)
@@ -40,6 +44,9 @@ class PasswordHasher(PasswordHasherPort):
 
     def verify(self, plain: str, hashed: str) -> bool:
         return verify_password(plain, hashed)
+
+    def dummy_verify(self, plain: str) -> None:
+        verify_password(plain, _DUMMY_HASH)
 
 
 class TokenIssuer(TokenIssuerPort):

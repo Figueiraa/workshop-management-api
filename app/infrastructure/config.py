@@ -14,7 +14,15 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str | None = None
     SMTP_FROM: str = "no-reply@workshop.local"
 
+    # Observabilidade e segurança HTTP
+    LOG_LEVEL: str = "INFO"
+    CORS_ORIGINS: str = "*"  # lista separada por vírgula; use origens explícitas em produção
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
 
 
 settings = Settings()
