@@ -1,6 +1,11 @@
 # Workshop Management API
 
-MVP de sistema integrado para gestão de oficina mecânica, construído com FastAPI seguindo Arquitetura em Camadas (Controller → Service → Repository).
+Sistema integrado para gestão de oficina mecânica, construído com FastAPI.
+
+> **Fase 2 (em andamento):** o projeto está sendo evoluído para **Clean Architecture**,
+> separando as camadas de domínio, casos de uso, infraestrutura e interfaces. A base da Fase 1
+> foi implementada em Arquitetura em Camadas (Controller → Service → Repository) e está sendo
+> migrada de forma incremental.
 
 ## Requisitos
 
