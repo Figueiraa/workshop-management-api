@@ -1,8 +1,8 @@
 import pytest
 from pydantic import ValidationError
 
-from app.schemas.client_schema import ClientCreate
-from app.schemas.vehicle_schema import VehicleCreate
+from app.interfaces.http.schemas.client_schema import ClientCreate
+from app.interfaces.http.schemas.vehicle_schema import VehicleCreate
 
 
 class TestCpfCnpjValidation:
@@ -47,14 +47,14 @@ class TestPlateValidation:
 
 class TestStatusTransitions:
     def test_valid_transitions(self):
-        from app.models.service_order_model import VALID_TRANSITIONS, ServiceOrderStatus
+        from app.domain.value_objects.service_order_status import VALID_TRANSITIONS, ServiceOrderStatus
 
         assert ServiceOrderStatus.EM_DIAGNOSTICO in VALID_TRANSITIONS[ServiceOrderStatus.RECEBIDA]
         assert ServiceOrderStatus.EM_EXECUCAO in VALID_TRANSITIONS[ServiceOrderStatus.AGUARDANDO_APROVACAO]
         assert VALID_TRANSITIONS[ServiceOrderStatus.ENTREGUE] == []
 
     def test_no_skip_transitions(self):
-        from app.models.service_order_model import VALID_TRANSITIONS, ServiceOrderStatus
+        from app.domain.value_objects.service_order_status import VALID_TRANSITIONS, ServiceOrderStatus
 
         assert ServiceOrderStatus.EM_EXECUCAO not in VALID_TRANSITIONS[ServiceOrderStatus.RECEBIDA]
         assert ServiceOrderStatus.ENTREGUE not in VALID_TRANSITIONS[ServiceOrderStatus.EM_EXECUCAO]

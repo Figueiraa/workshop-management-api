@@ -1,7 +1,11 @@
 from app.domain.entities.service_order import ServiceOrder, ServiceOrderItem, ServiceOrderPart
-from app.models.service_order_model import ServiceOrder as ServiceOrderModel
-from app.models.service_order_model import ServiceOrderItem as ServiceOrderItemModel
-from app.models.service_order_model import ServiceOrderPart as ServiceOrderPartModel
+from app.infrastructure.persistence.models.service_order_model import ServiceOrder as ServiceOrderModel
+from app.infrastructure.persistence.models.service_order_model import (
+    ServiceOrderItem as ServiceOrderItemModel,
+)
+from app.infrastructure.persistence.models.service_order_model import (
+    ServiceOrderPart as ServiceOrderPartModel,
+)
 
 
 def to_domain(model: ServiceOrderModel) -> ServiceOrder:

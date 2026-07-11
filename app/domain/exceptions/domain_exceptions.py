@@ -25,3 +25,8 @@ class InsufficientStockError(Exception):
 class InvalidStatusTransitionError(Exception):
     def __init__(self, current: str, target: str):
         super().__init__(f"Transição de status inválida: '{current}' → '{target}'")
+
+
+class UnauthorizedError(Exception):
+    def __init__(self, message: str = "Credenciais inválidas"):
+        super().__init__(message)

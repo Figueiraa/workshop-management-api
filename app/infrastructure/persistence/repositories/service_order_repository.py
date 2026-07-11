@@ -6,7 +6,7 @@ from app.application.ports.service_order_repository import ServiceOrderRepositor
 from app.domain.entities.service_order import ServiceOrder
 from app.domain.value_objects.service_order_status import ServiceOrderStatus
 from app.infrastructure.persistence.mappers.service_order_mapper import to_domain, to_model
-from app.models.service_order_model import ServiceOrder as ServiceOrderModel
+from app.infrastructure.persistence.models.service_order_model import ServiceOrder as ServiceOrderModel
 
 
 class SqlAlchemyServiceOrderRepository(ServiceOrderRepositoryPort):

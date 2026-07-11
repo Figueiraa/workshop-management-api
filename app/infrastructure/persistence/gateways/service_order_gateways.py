@@ -9,9 +9,9 @@ from app.application.ports.gateways import (
     VehicleGatewayPort,
     VehicleRef,
 )
-from app.models.part_model import Part
-from app.models.service_type_model import ServiceType
-from app.models.vehicle_model import Vehicle
+from app.infrastructure.persistence.models.part_model import Part
+from app.infrastructure.persistence.models.service_type_model import ServiceType
+from app.infrastructure.persistence.models.vehicle_model import Vehicle
 
 
 class SqlAlchemyVehicleGateway(VehicleGatewayPort):
