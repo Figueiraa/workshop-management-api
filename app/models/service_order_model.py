@@ -1,29 +1,21 @@
-import enum
 from datetime import datetime, timezone
 
 from sqlalchemy import DateTime, Enum, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
+from app.domain.value_objects.service_order_status import VALID_TRANSITIONS, ServiceOrderStatus
 
-
-class ServiceOrderStatus(str, enum.Enum):
-    RECEBIDA = "RECEBIDA"
-    EM_DIAGNOSTICO = "EM_DIAGNOSTICO"
-    AGUARDANDO_APROVACAO = "AGUARDANDO_APROVACAO"
-    EM_EXECUCAO = "EM_EXECUCAO"
-    FINALIZADA = "FINALIZADA"
-    ENTREGUE = "ENTREGUE"
-
-
-VALID_TRANSITIONS: dict[ServiceOrderStatus, list[ServiceOrderStatus]] = {
-    ServiceOrderStatus.RECEBIDA: [ServiceOrderStatus.EM_DIAGNOSTICO],
-    ServiceOrderStatus.EM_DIAGNOSTICO: [ServiceOrderStatus.AGUARDANDO_APROVACAO],
-    ServiceOrderStatus.AGUARDANDO_APROVACAO: [ServiceOrderStatus.EM_EXECUCAO],
-    ServiceOrderStatus.EM_EXECUCAO: [ServiceOrderStatus.FINALIZADA],
-    ServiceOrderStatus.FINALIZADA: [ServiceOrderStatus.ENTREGUE],
-    ServiceOrderStatus.ENTREGUE: [],
-}
+# `ServiceOrderStatus` e `VALID_TRANSITIONS` foram movidos para a camada de domínio
+# (app/domain/value_objects). São reexportados aqui apenas para compatibilidade durante
+# a migração incremental para Clean Architecture.
+__all__ = [
+    "VALID_TRANSITIONS",
+    "ServiceOrder",
+    "ServiceOrderItem",
+    "ServiceOrderPart",
+    "ServiceOrderStatus",
+]
 
 
 class ServiceOrder(Base):
