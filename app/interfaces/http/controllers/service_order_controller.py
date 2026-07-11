@@ -6,6 +6,8 @@ from app.application.dtos.service_order_dtos import (
     OpenServiceOrderItemInput,
     OpenServiceOrderPartInput,
 )
+from app.application.ports.notifier import NotifierPort
+from app.application.use_cases.approve_budget import ApproveBudgetUseCase
 from app.application.use_cases.get_average_execution_time import GetAverageExecutionTimeUseCase
 from app.application.use_cases.get_service_order import GetServiceOrderUseCase
 from app.application.use_cases.list_service_orders import ListServiceOrdersUseCase
@@ -13,17 +15,20 @@ from app.application.use_cases.open_service_order import OpenServiceOrderUseCase
 from app.application.use_cases.update_service_order_status import UpdateServiceOrderStatusUseCase
 from app.domain.value_objects.service_order_status import ServiceOrderStatus
 from app.infrastructure.database import get_db
+from app.infrastructure.notifications.notifier import build_notifier
 from app.infrastructure.persistence.gateways.service_order_gateways import (
     SqlAlchemyPartGateway,
     SqlAlchemyServiceTypeGateway,
     SqlAlchemyVehicleGateway,
 )
+from app.infrastructure.persistence.repositories.client_repository import SqlAlchemyClientRepository
 from app.infrastructure.persistence.repositories.service_order_repository import (
     SqlAlchemyServiceOrderRepository,
 )
 from app.interfaces.http.dependencies import get_current_user
 from app.interfaces.http.schemas.service_order_schema import (
     AverageExecutionTimeResponse,
+    BudgetApprovalRequest,
     ServiceOrderCreate,
     ServiceOrderResponse,
     ServiceOrderSummary,
@@ -35,6 +40,10 @@ router = APIRouter(prefix="/service-orders", tags=["Ordens de Serviço"])
 
 def _repository(db: AsyncSession) -> SqlAlchemyServiceOrderRepository:
     return SqlAlchemyServiceOrderRepository(db)
+
+
+def _notifier() -> NotifierPort:
+    return build_notifier()
 
 
 @router.get("", response_model=list[ServiceOrderSummary])
@@ -89,7 +98,24 @@ async def update_status(
     db: AsyncSession = Depends(get_db),
     _=Depends(get_current_user),
 ):
-    return await UpdateServiceOrderStatusUseCase(_repository(db)).execute(order_id, data.status)
+    use_case = UpdateServiceOrderStatusUseCase(_repository(db), SqlAlchemyClientRepository(db), _notifier())
+    return await use_case.execute(order_id, data.status)
+
+
+@router.post("/{order_id}/budget-approval", response_model=ServiceOrderResponse)
+async def budget_approval(
+    order_id: int,
+    data: BudgetApprovalRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Recebe notificações externas de aprovação ou recusa do orçamento do cliente."""
+    use_case = ApproveBudgetUseCase(
+        _repository(db),
+        SqlAlchemyPartGateway(db),
+        SqlAlchemyClientRepository(db),
+        _notifier(),
+    )
+    return await use_case.execute(order_id, data.approved)
 
 
 @router.get("/{order_id}/status", response_model=dict)

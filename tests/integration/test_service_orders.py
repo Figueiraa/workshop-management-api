@@ -216,6 +216,84 @@ async def test_public_status_not_found_returns_404(client: AsyncClient):
     assert r.status_code == 404
 
 
+async def _advance(client: AsyncClient, order_id: int, statuses: list[str]) -> None:
+    for s in statuses:
+        r = await client.patch(f"/service-orders/{order_id}/status", json={"status": s})
+        assert r.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_budget_approval_approve(auth_client: AsyncClient):
+    cid = await _create_client(auth_client)
+    vid = await _create_vehicle(auth_client, cid)
+    oid = (await auth_client.post("/service-orders", json={"vehicle_id": vid})).json()["id"]
+    await _advance(auth_client, oid, ["EM_DIAGNOSTICO", "AGUARDANDO_APROVACAO"])
+
+    r = await auth_client.post(f"/service-orders/{oid}/budget-approval", json={"approved": True})
+    assert r.status_code == 200
+    assert r.json()["status"] == "EM_EXECUCAO"
+
+
+@pytest.mark.asyncio
+async def test_budget_approval_reject_restores_stock(auth_client: AsyncClient):
+    cid = await _create_client(auth_client)
+    vid = await _create_vehicle(auth_client, cid)
+    pid = await _create_part(auth_client)
+    oid = (await auth_client.post("/service-orders", json={
+        "vehicle_id": vid,
+        "parts": [{"part_id": pid, "quantity": 3}],
+    })).json()["id"]
+    assert (await auth_client.get(f"/parts/{pid}")).json()["stock_quantity"] == 7
+
+    await _advance(auth_client, oid, ["EM_DIAGNOSTICO", "AGUARDANDO_APROVACAO"])
+    r = await auth_client.post(f"/service-orders/{oid}/budget-approval", json={"approved": False})
+    assert r.status_code == 200
+    assert r.json()["status"] == "ORCAMENTO_RECUSADO"
+    assert (await auth_client.get(f"/parts/{pid}")).json()["stock_quantity"] == 10
+
+
+@pytest.mark.asyncio
+async def test_budget_approval_wrong_state_returns_422(auth_client: AsyncClient):
+    cid = await _create_client(auth_client)
+    vid = await _create_vehicle(auth_client, cid)
+    oid = (await auth_client.post("/service-orders", json={"vehicle_id": vid})).json()["id"]
+    r = await auth_client.post(f"/service-orders/{oid}/budget-approval", json={"approved": True})
+    assert r.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_list_orders_priority_ordering_and_exclusion(auth_client: AsyncClient):
+    cid = await _create_client(auth_client)
+    vid = await _create_vehicle(auth_client, cid)
+
+    async def _new_order() -> int:
+        return (await auth_client.post("/service-orders", json={"vehicle_id": vid})).json()["id"]
+
+    recebida_1 = await _new_order()
+    recebida_2 = await _new_order()
+    diagnostico = await _new_order()
+    aguardando = await _new_order()
+    execucao = await _new_order()
+    entregue = await _new_order()
+
+    await _advance(auth_client, diagnostico, ["EM_DIAGNOSTICO"])
+    await _advance(auth_client, aguardando, ["EM_DIAGNOSTICO", "AGUARDANDO_APROVACAO"])
+    await _advance(auth_client, execucao, ["EM_DIAGNOSTICO", "AGUARDANDO_APROVACAO", "EM_EXECUCAO"])
+    await _advance(
+        auth_client,
+        entregue,
+        ["EM_DIAGNOSTICO", "AGUARDANDO_APROVACAO", "EM_EXECUCAO", "FINALIZADA", "ENTREGUE"],
+    )
+
+    body = (await auth_client.get("/service-orders")).json()
+    ids = [o["id"] for o in body]
+
+    # Entregue (terminal) excluída da listagem.
+    assert entregue not in ids
+    # Ordem por prioridade de status; dentro de RECEBIDA, mais antiga primeiro.
+    assert ids == [execucao, aguardando, diagnostico, recebida_1, recebida_2]
+
+
 @pytest.mark.asyncio
 async def test_stock_decremented_on_order_creation(auth_client: AsyncClient):
     cid = await _create_client(auth_client)

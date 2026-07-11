@@ -7,6 +7,13 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 
+    # Notificações por e-mail (SMTP). Sem SMTP_HOST, cai no notificador de log.
+    SMTP_HOST: str | None = None
+    SMTP_PORT: int = 587
+    SMTP_USER: str | None = None
+    SMTP_PASSWORD: str | None = None
+    SMTP_FROM: str = "no-reply@workshop.local"
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
 

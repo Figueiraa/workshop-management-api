@@ -1,12 +1,21 @@
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.application.ports.service_order_repository import ServiceOrderRepositoryPort
 from app.domain.entities.service_order import ServiceOrder
-from app.domain.value_objects.service_order_status import ServiceOrderStatus
+from app.domain.value_objects.service_order_status import TERMINAL_STATUSES, ServiceOrderStatus
 from app.infrastructure.persistence.mappers.service_order_mapper import to_domain, to_model
 from app.infrastructure.persistence.models.service_order_model import ServiceOrder as ServiceOrderModel
+
+# Prioridade de exibição na listagem: Em Execução > Aguardando Aprovação > Diagnóstico > Recebida.
+_STATUS_PRIORITY = case(
+    (ServiceOrderModel.status == ServiceOrderStatus.EM_EXECUCAO, 1),
+    (ServiceOrderModel.status == ServiceOrderStatus.AGUARDANDO_APROVACAO, 2),
+    (ServiceOrderModel.status == ServiceOrderStatus.EM_DIAGNOSTICO, 3),
+    (ServiceOrderModel.status == ServiceOrderStatus.RECEBIDA, 4),
+    else_=99,
+)
 
 
 class SqlAlchemyServiceOrderRepository(ServiceOrderRepositoryPort):
@@ -34,8 +43,13 @@ class SqlAlchemyServiceOrderRepository(ServiceOrderRepositoryPort):
         model = await self._get_model(order_id)
         return to_domain(model) if model else None
 
-    async def get_all(self) -> list[ServiceOrder]:
-        result = await self._db.execute(self._with_relations().order_by(ServiceOrderModel.created_at.desc()))
+    async def list_open_ordered(self) -> list[ServiceOrder]:
+        query = (
+            self._with_relations()
+            .where(ServiceOrderModel.status.notin_(TERMINAL_STATUSES))
+            .order_by(_STATUS_PRIORITY, ServiceOrderModel.created_at.asc(), ServiceOrderModel.id.asc())
+        )
+        result = await self._db.execute(query)
         return [to_domain(model) for model in result.scalars().all()]
 
     async def get_by_status(self, status: ServiceOrderStatus) -> list[ServiceOrder]:

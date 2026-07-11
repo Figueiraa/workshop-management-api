@@ -57,3 +57,10 @@ class SqlAlchemyPartGateway(PartGatewayPort):
         part = result.scalar_one_or_none()
         if part is not None:
             part.stock_quantity -= quantity
+
+    async def increment_stock(self, part_id: int, quantity: int) -> None:
+        # Devolve peças ao estoque (ex.: orçamento recusado). Commit feito pelo repositório da OS.
+        result = await self._db.execute(select(Part).where(Part.id == part_id))
+        part = result.scalar_one_or_none()
+        if part is not None:
+            part.stock_quantity += quantity

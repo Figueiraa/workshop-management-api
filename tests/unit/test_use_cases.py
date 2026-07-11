@@ -8,6 +8,7 @@ from app.application.dtos.part_dtos import CreatePartInput, UpdatePartInput
 from app.application.dtos.service_order_dtos import OpenServiceOrderInput, OpenServiceOrderPartInput
 from app.application.dtos.service_type_dtos import CreateServiceTypeInput, UpdateServiceTypeInput
 from app.application.dtos.vehicle_dtos import CreateVehicleInput, UpdateVehicleInput
+from app.application.use_cases.approve_budget import ApproveBudgetUseCase
 from app.application.use_cases.auth import AuthenticateUserUseCase, RegisterUserUseCase
 from app.application.use_cases.client import (
     CreateClientUseCase,
@@ -48,6 +49,7 @@ from app.domain.exceptions.domain_exceptions import (
 )
 from app.domain.value_objects.service_order_status import ServiceOrderStatus
 from app.infrastructure.database import Base
+from app.infrastructure.notifications.notifier import LoggingNotifier
 from app.infrastructure.persistence.gateways.service_order_gateways import (
     SqlAlchemyPartGateway,
     SqlAlchemyServiceTypeGateway,
@@ -406,6 +408,29 @@ def _open_order(session: AsyncSession) -> OpenServiceOrderUseCase:
     )
 
 
+def _update_status(session: AsyncSession) -> UpdateServiceOrderStatusUseCase:
+    return UpdateServiceOrderStatusUseCase(
+        SqlAlchemyServiceOrderRepository(session),
+        SqlAlchemyClientRepository(session),
+        LoggingNotifier(),
+    )
+
+
+def _approve_budget(session: AsyncSession) -> ApproveBudgetUseCase:
+    return ApproveBudgetUseCase(
+        SqlAlchemyServiceOrderRepository(session),
+        SqlAlchemyPartGateway(session),
+        SqlAlchemyClientRepository(session),
+        LoggingNotifier(),
+    )
+
+
+async def _advance_to_awaiting_approval(session: AsyncSession, order):
+    update = _update_status(session)
+    order = await update.execute(order.id, ServiceOrderStatus.EM_DIAGNOSTICO)
+    return await update.execute(order.id, ServiceOrderStatus.AGUARDANDO_APROVACAO)
+
+
 @pytest.mark.asyncio
 async def test_order_create(session: AsyncSession):
     vehicle, _, part = await _setup_order_prerequisites(session)
@@ -442,7 +467,7 @@ async def test_order_create_insufficient_stock_raises(session: AsyncSession):
 async def test_order_status_full_flow(session: AsyncSession):
     vehicle, _, _ = await _setup_order_prerequisites(session)
     order = await _open_order(session).execute(OpenServiceOrderInput(vehicle_id=vehicle.id))
-    update = UpdateServiceOrderStatusUseCase(SqlAlchemyServiceOrderRepository(session))
+    update = _update_status(session)
     for target in [
         ServiceOrderStatus.EM_DIAGNOSTICO,
         ServiceOrderStatus.AGUARDANDO_APROVACAO,
@@ -461,14 +486,14 @@ async def test_order_status_full_flow(session: AsyncSession):
 async def test_order_invalid_transition_raises(session: AsyncSession):
     vehicle, _, _ = await _setup_order_prerequisites(session)
     order = await _open_order(session).execute(OpenServiceOrderInput(vehicle_id=vehicle.id))
-    update = UpdateServiceOrderStatusUseCase(SqlAlchemyServiceOrderRepository(session))
+    update = _update_status(session)
     with pytest.raises(InvalidStatusTransitionError):
         await update.execute(order.id, ServiceOrderStatus.ENTREGUE)
 
 
 @pytest.mark.asyncio
 async def test_order_update_status_not_found_raises(session: AsyncSession):
-    update = UpdateServiceOrderStatusUseCase(SqlAlchemyServiceOrderRepository(session))
+    update = _update_status(session)
     with pytest.raises(NotFoundError):
         await update.execute(9999, ServiceOrderStatus.EM_DIAGNOSTICO)
 
@@ -484,7 +509,7 @@ async def test_order_average_execution_time_no_data(session: AsyncSession):
 async def test_order_average_execution_time_with_data(session: AsyncSession):
     vehicle, _, _ = await _setup_order_prerequisites(session)
     order = await _open_order(session).execute(OpenServiceOrderInput(vehicle_id=vehicle.id))
-    update = UpdateServiceOrderStatusUseCase(SqlAlchemyServiceOrderRepository(session))
+    update = _update_status(session)
     for target in [
         ServiceOrderStatus.EM_DIAGNOSTICO,
         ServiceOrderStatus.AGUARDANDO_APROVACAO,
@@ -496,3 +521,45 @@ async def test_order_average_execution_time_with_data(session: AsyncSession):
     result = await GetAverageExecutionTimeUseCase(SqlAlchemyServiceOrderRepository(session)).execute()
     assert result.total_completed == 1
     assert result.average_minutes is not None
+
+
+@pytest.mark.asyncio
+async def test_budget_approval_approves_moves_to_execution(session: AsyncSession):
+    vehicle, _, _ = await _setup_order_prerequisites(session)
+    order = await _open_order(session).execute(OpenServiceOrderInput(vehicle_id=vehicle.id))
+    order = await _advance_to_awaiting_approval(session, order)
+    approved = await _approve_budget(session).execute(order.id, approved=True)
+    assert approved.status == ServiceOrderStatus.EM_EXECUCAO
+
+
+@pytest.mark.asyncio
+async def test_budget_approval_rejects_and_restores_stock(session: AsyncSession):
+    vehicle, _, part = await _setup_order_prerequisites(session)
+    order = await _open_order(session).execute(
+        OpenServiceOrderInput(
+            vehicle_id=vehicle.id,
+            parts=[OpenServiceOrderPartInput(part_id=part.id, quantity=3)],
+        )
+    )
+    # Estoque baixou de 10 para 7 na abertura.
+    assert (await SqlAlchemyPartRepository(session).get_by_id(part.id)).stock_quantity == 7
+
+    order = await _advance_to_awaiting_approval(session, order)
+    rejected = await _approve_budget(session).execute(order.id, approved=False)
+    assert rejected.status == ServiceOrderStatus.ORCAMENTO_RECUSADO
+    # Peças devolvidas ao estoque.
+    assert (await SqlAlchemyPartRepository(session).get_by_id(part.id)).stock_quantity == 10
+
+
+@pytest.mark.asyncio
+async def test_budget_approval_from_wrong_state_raises(session: AsyncSession):
+    vehicle, _, _ = await _setup_order_prerequisites(session)
+    order = await _open_order(session).execute(OpenServiceOrderInput(vehicle_id=vehicle.id))
+    with pytest.raises(InvalidStatusTransitionError):
+        await _approve_budget(session).execute(order.id, approved=True)
+
+
+@pytest.mark.asyncio
+async def test_budget_approval_not_found_raises(session: AsyncSession):
+    with pytest.raises(NotFoundError):
+        await _approve_budget(session).execute(9999, approved=True)

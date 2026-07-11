@@ -26,6 +26,10 @@ class ServiceOrderUpdateStatus(BaseModel):
     status: ServiceOrderStatus
 
 
+class BudgetApprovalRequest(BaseModel):
+    approved: bool
+
+
 class ServiceOrderItemResponse(BaseModel):
     id: int
     service_type_id: int

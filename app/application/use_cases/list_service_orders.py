@@ -10,4 +10,5 @@ class ListServiceOrdersUseCase:
     async def execute(self, status: ServiceOrderStatus | None = None) -> list[ServiceOrder]:
         if status is not None:
             return await self._repo.get_by_status(status)
-        return await self._repo.get_all()
+        # Sem filtro: lista apenas OS ativas, ordenadas por prioridade de status.
+        return await self._repo.list_open_ordered()
