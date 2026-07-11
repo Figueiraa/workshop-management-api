@@ -78,3 +78,5 @@ class ServiceOrderSummary(BaseModel):
 class AverageExecutionTimeResponse(BaseModel):
     average_minutes: float | None
     total_completed: int
+
+    model_config = {"from_attributes": True}

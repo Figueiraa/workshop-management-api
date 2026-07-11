@@ -13,3 +13,5 @@ select = [
 
 [lint.per-file-ignores]
 "tests/*" = ["E501"]
+# Depends()/Query() em defaults é o padrão idiomático do FastAPI (B008 é falso positivo aqui).
+"app/controllers/*" = ["B008"]
