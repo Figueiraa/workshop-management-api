@@ -1,0 +1,9 @@
+# Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+crash.log
+# Variáveis com segredos reais (use o .example como referência)
+terraform.tfvars
+*.auto.tfvars

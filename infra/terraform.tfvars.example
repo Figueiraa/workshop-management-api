@@ -1,0 +1,9 @@
+# Copie para terraform.tfvars e ajuste. NÃO commite terraform.tfvars com segredos reais.
+cluster_name = "workshop"
+node_image   = "kindest/node:v1.30.0"
+namespace    = "workshop"
+
+db_name     = "workshop"
+db_user     = "workshop"
+db_password = "troque-esta-senha"
+db_storage  = "1Gi"

@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: workshop-api
+  namespace: workshop
+  labels:
+    app: workshop-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: workshop-api
+  template:
+    metadata:
+      labels:
+        app: workshop-api
+    spec:
+      # Aguarda o Postgres aceitar conexões antes de subir a API.
+      initContainers:
+        - name: wait-for-db
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - "until nc -z workshop-postgres 5432; do echo 'aguardando o banco...'; sleep 2; done"
+      containers:
+        - name: api
+          # Imagem substituída pela pipeline de CI/CD (Fase H). Em cluster local (kind),
+          # carregue a imagem com `kind load docker-image workshop-management-api:latest`.
+          image: workshop-management-api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: workshop-config
+            - secretRef:
+                name: workshop-secret
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5

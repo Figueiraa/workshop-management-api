@@ -1,0 +1,84 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: workshop-postgres
+  namespace: workshop
+  labels:
+    app: workshop-postgres
+spec:
+  # Headless service (StatefulSet).
+  clusterIP: None
+  selector:
+    app: workshop-postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: workshop-postgres
+  namespace: workshop
+spec:
+  serviceName: workshop-postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: workshop-postgres
+  template:
+    metadata:
+      labels:
+        app: workshop-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: workshop-config
+                  key: POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: workshop-config
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: workshop-secret
+                  key: POSTGRES_PASSWORD
+            # Subdiretório evita conflito com o lost+found do volume.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "workshop", "-d", "workshop"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "workshop", "-d", "workshop"]
+            initialDelaySeconds: 15
+            periodSeconds: 10
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
