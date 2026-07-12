@@ -15,9 +15,9 @@ class Vehicle(Base):
     model: Mapped[str] = mapped_column(String(100), nullable=False)
     year: Mapped[int] = mapped_column(Integer, nullable=False)
     client_id: Mapped[int] = mapped_column(ForeignKey("clients.id"), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime,
+        DateTime(timezone=True),
         default=lambda: datetime.now(UTC),
         onupdate=lambda: datetime.now(UTC),
     )

@@ -19,15 +19,15 @@ class ServiceOrder(Base):
     )
     notes: Mapped[str | None] = mapped_column(Text)
     total_budget: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False, default=0)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime,
+        DateTime(timezone=True),
         default=lambda: datetime.now(UTC),
         onupdate=lambda: datetime.now(UTC),
     )
-    started_at: Mapped[datetime | None] = mapped_column(DateTime)
-    completed_at: Mapped[datetime | None] = mapped_column(DateTime)
-    delivered_at: Mapped[datetime | None] = mapped_column(DateTime)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     vehicle: Mapped["Vehicle"] = relationship("Vehicle", back_populates="service_orders")  # noqa: F821
     client: Mapped["Client"] = relationship("Client")  # noqa: F821
