@@ -8,6 +8,8 @@ Clean Architecture com testes automatizados, novas APIs de Ordem de Serviço e i
 moderna — containerização (Docker), orquestração (Kubernetes com autoescalonamento),
 Infraestrutura como Código (Terraform) e pipeline de CI/CD.
 
+🎥 **Vídeo demonstrativo (≤ 15 min):** https://youtu.be/LKsReHnUPCw
+
 ## Objetivos da Fase 2
 
 - **Qualidade de código:** Clean Code + Clean Architecture + testes automatizados.
@@ -260,6 +262,10 @@ pytest --cov=app --cov-report=term-missing
 
 ## Entregáveis da Fase 2
 
-- **Vídeo demonstrativo:** _<a preencher — link do YouTube/Vimeo, até 15 min>_
-  (deploy, execução do CI/CD, consumo das APIs e escalabilidade automática).
-- **Repositório:** compartilhar com o usuário `soat-architecture`.
+- 🎥 **Vídeo demonstrativo (≤ 15 min):** https://youtu.be/LKsReHnUPCw
+  — demonstra o deploy da aplicação, a execução do CI/CD, o consumo das APIs e a
+  escalabilidade automática (HPA sob carga).
+- 📦 **Repositório** compartilhado com o usuário `soat-architecture`.
+- 🖼️ **Desenho da arquitetura** (componentes, infraestrutura e fluxo de deploy): ver a seção
+  [Arquitetura da aplicação](#arquitetura-da-aplicação) e
+  [Infraestrutura provisionada e fluxo de deploy](#infraestrutura-provisionada-e-fluxo-de-deploy).
