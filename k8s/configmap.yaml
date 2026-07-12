@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: workshop-config
+  namespace: workshop
+data:
+  LOG_LEVEL: "INFO"
+  CORS_ORIGINS: "*"
+  ALGORITHM: "HS256"
+  ACCESS_TOKEN_EXPIRE_MINUTES: "60"
+  # Dados não sensíveis do banco (a senha vai no Secret).
+  POSTGRES_DB: "workshop"
+  POSTGRES_USER: "workshop"

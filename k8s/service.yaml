@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: workshop-api
+  namespace: workshop
+  labels:
+    app: workshop-api
+spec:
+  type: ClusterIP
+  selector:
+    app: workshop-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8000
+# Acesso local:  kubectl -n workshop port-forward svc/workshop-api 8000:80
+# Para exposição externa, troque por type: LoadBalancer ou adicione um Ingress.
