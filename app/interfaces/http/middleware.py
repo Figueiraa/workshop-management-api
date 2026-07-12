@@ -21,13 +21,19 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
         return response
 
 
+# Rotas da documentação interativa (Swagger UI / ReDoc): carregam assets de CDN e
+# usam script inline, então a CSP restritiva não se aplica a elas.
+_DOCS_PATHS = ("/docs", "/redoc", "/openapi.json")
+
+
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    """Adiciona cabeçalhos de segurança recomendados (OWASP) a todas as respostas."""
+    """Adiciona cabeçalhos de segurança recomendados (OWASP) às respostas da API."""
 
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "no-referrer"
-        response.headers["Content-Security-Policy"] = "default-src 'self'"
+        if not request.url.path.startswith(_DOCS_PATHS):
+            response.headers["Content-Security-Policy"] = "default-src 'self'"
         return response
