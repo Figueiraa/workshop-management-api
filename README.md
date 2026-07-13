@@ -187,14 +187,44 @@ As rotas administrativas exigem login. No Swagger:
 
 ## Execução com Docker Compose
 
-Requisitos: Docker + Docker Compose.
+Sobe a API **e** o PostgreSQL juntos, num ambiente próximo ao de produção — ótimo para rodar sem instalar Python na máquina.
 
+**Pré-requisitos:** Docker + Docker Compose (o Docker Desktop já inclui os dois).
+
+**1. Clone o repositório e entre na pasta** (se ainda não fez)
+```bash
+git clone https://github.com/Figueiraa/workshop-management-api.git
+cd workshop-management-api
+```
+
+**2. Garanta que o Docker está rodando**
+
+Abra o **Docker Desktop** e espere o status ficar **"Running"** (no Linux: `sudo systemctl start docker`).
+
+**3. Suba o ambiente**
 ```bash
 docker compose up --build
 ```
+> Na primeira vez demora alguns minutos (baixa as imagens e constrói a aplicação). Não precisa de `.env`: o `compose` já traz valores padrão e aponta a API para o PostgreSQL.
 
-Sobe a API (porta 8000) e o PostgreSQL, com healthchecks. Não exige `.env` (há defaults
-sobrescrevíveis no `compose`).
+**4. Aguarde ficar pronto**
+
+O ambiente está no ar quando o log mostrar `Uvicorn running on http://0.0.0.0:8000` (e o banco, `database system is ready to accept connections`).
+
+**5. Acesse e verifique**
+- Swagger: **http://localhost:8000/docs**
+- Health: **http://localhost:8000/health** → deve retornar `{"status":"ok"}`
+
+**6. Primeiro uso (autenticação)**
+
+Mesmo fluxo da execução local: cadastre um usuário em **`POST /api/v1/auth/register`**, clique em **Authorize** e informe o usuário/senha.
+
+**7. Parar e limpar**
+- Pare com **Ctrl+C**. Para remover os containers:
+  ```bash
+  docker compose down
+  ```
+- Para remover **também os dados do banco** (recomeçar do zero): `docker compose down -v`
 
 ## Deploy em Kubernetes
 
