@@ -126,22 +126,64 @@ infra/                       # Terraform (cluster + metrics-server + PostgreSQL)
 
 ## Execução local (sem Docker)
 
-Requisitos: Python 3.11+.
+Roda a API direto na sua máquina usando **SQLite** — não precisa de banco nem de nenhum serviço externo.
 
+**Pré-requisitos:** Python 3.11+ e Git.
+
+**1. Clone o repositório e entre na pasta**
 ```bash
-python -m venv .venv
-# Windows
-.venv\Scripts\activate
-# Linux/macOS
-source .venv/bin/activate
-
-pip install -r requirements.txt
-cp .env.example .env          # o padrão já usa SQLite, sem serviços externos
-
-uvicorn app.main:app --reload
+git clone https://github.com/Figueiraa/workshop-management-api.git
+cd workshop-management-api
 ```
 
-API em `http://localhost:8000` · Swagger em `http://localhost:8000/docs`.
+**2. Crie o ambiente virtual**
+```bash
+python -m venv .venv
+```
+
+**3. Ative o ambiente virtual**
+
+- **Windows (PowerShell):**
+  ```powershell
+  .venv\Scripts\Activate.ps1
+  ```
+  > Se aparecer *"a execução de scripts foi desabilitada"*, rode uma vez e tente de novo:
+  > `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass`
+- **Linux / macOS:**
+  ```bash
+  source .venv/bin/activate
+  ```
+  ✅ O início da linha do terminal passa a mostrar `(.venv)`.
+
+**4. Instale as dependências**
+```bash
+pip install -r requirements.txt
+```
+
+**5. Crie o arquivo de configuração**
+```bash
+cp .env.example .env
+```
+O `.env` padrão já vem com SQLite (`sqlite+aiosqlite:///./workshop.db`) — nada mais a configurar.
+
+**6. Suba a aplicação**
+```bash
+uvicorn app.main:app --reload
+```
+✅ Deve aparecer no terminal: `Uvicorn running on http://127.0.0.1:8000`.
+
+**7. Acesse e verifique**
+- Swagger (documentação interativa): **http://localhost:8000/docs**
+- Health check: **http://localhost:8000/health** → deve retornar `{"status":"ok"}`
+
+**8. Primeiro uso (autenticação)**
+
+As rotas administrativas exigem login. No Swagger:
+1. Cadastre um usuário em **`POST /api/v1/auth/register`** (ex.: `{"username":"admin","email":"admin@teste.com","password":"senha123"}`).
+2. Clique em **Authorize** (cadeado), informe o mesmo usuário e senha, e confirme.
+3. Pronto — agora você pode consumir todas as rotas `/api/v1/...`.
+
+> Para encerrar a aplicação, pressione **Ctrl+C** no terminal.
 
 ## Execução com Docker Compose
 
