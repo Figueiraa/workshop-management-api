@@ -16,6 +16,11 @@ from app.application.use_cases.update_service_order_status import UpdateServiceO
 from app.domain.value_objects.service_order_status import ServiceOrderStatus
 from app.infrastructure.database import get_db
 from app.infrastructure.notifications.notifier import build_notifier
+from app.infrastructure.observability.metrics import (
+    record_budget_approval,
+    record_service_order_opened,
+    record_status_transition,
+)
 from app.infrastructure.persistence.gateways.service_order_gateways import (
     SqlAlchemyPartGateway,
     SqlAlchemyServiceTypeGateway,
@@ -88,7 +93,12 @@ async def create_order(
             OpenServiceOrderPartInput(part_id=part.part_id, quantity=part.quantity) for part in data.parts
         ],
     )
-    return await use_case.execute(payload)
+    order = await use_case.execute(payload)
+    # Métricas de negócio são registradas no adapter: o caso de uso permanece
+    # livre de dependências de infraestrutura (regra de dependência).
+    record_service_order_opened()
+    record_status_transition(order.status.value)
+    return order
 
 
 @router.patch("/{order_id}/status", response_model=ServiceOrderResponse)
@@ -99,7 +109,9 @@ async def update_status(
     _=Depends(get_current_user),
 ):
     use_case = UpdateServiceOrderStatusUseCase(_repository(db), SqlAlchemyClientRepository(db), _notifier())
-    return await use_case.execute(order_id, data.status)
+    order = await use_case.execute(order_id, data.status)
+    record_status_transition(order.status.value)
+    return order
 
 
 @router.post("/{order_id}/budget-approval", response_model=ServiceOrderResponse)
@@ -115,7 +127,10 @@ async def budget_approval(
         SqlAlchemyClientRepository(db),
         _notifier(),
     )
-    return await use_case.execute(order_id, data.approved)
+    order = await use_case.execute(order_id, data.approved)
+    record_budget_approval(data.approved)
+    record_status_transition(order.status.value)
+    return order
 
 
 @router.get("/{order_id}/status", response_model=dict)
