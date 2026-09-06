@@ -15,10 +15,12 @@ env/
 *.db
 *.db-journal
 
-# Pytest
+# Pytest / cobertura (relatórios gerados a cada execução)
 .pytest_cache/
 .coverage
+coverage.xml
 htmlcov/
+report/
 
 # Relatórios gerados (ex.: Bandit). API JSON não possui HTML versionado.
 *.html

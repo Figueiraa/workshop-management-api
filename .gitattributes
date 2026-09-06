@@ -1,0 +1,2 @@
+# Shell scripts precisam de LF para rodar em Linux (CI e cluster).
+*.sh text eol=lf

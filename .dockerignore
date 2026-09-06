@@ -10,8 +10,12 @@ __pycache__
 .mypy_cache
 .coverage
 htmlcov
+coverage.xml
+report
 tests
 docs
+monitoring
+scripts
 *.db
 *.db-journal
 .env
