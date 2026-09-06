@@ -1,0 +1,26 @@
+# Configuração do Prometheus para o ambiente local (Docker Compose).
+# Em Kubernetes, a descoberta é feita por annotations nos pods (ver k8s/monitoring/).
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    environment: local
+    application: workshop-management-api
+
+rule_files:
+  - /etc/prometheus/rules/alerts.yml
+
+scrape_configs:
+  # A própria API, via endpoint /metrics.
+  - job_name: workshop-api
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["api:8000"]
+        labels:
+          service: workshop-api
+
+  # Auto-monitoramento do Prometheus.
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

@@ -14,6 +14,11 @@ spec:
     metadata:
       labels:
         app: workshop-api
+      annotations:
+        # Descoberta automatica pelo Prometheus (ver k8s/monitoring/).
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: /metrics
     spec:
       # Aguarda o Postgres aceitar conexões antes de subir a API.
       initContainers:

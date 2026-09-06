@@ -1,0 +1,72 @@
+# Regras de alerta baseadas no método RED (Rate, Errors, Duration) e em
+# indicadores de negócio da oficina. Visíveis em http://localhost:9090/alerts.
+
+groups:
+  - name: workshop-api-disponibilidade
+    rules:
+      - alert: ApiIndisponivel
+        expr: up{job="workshop-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "API da oficina fora do ar"
+          description: "O alvo {{ $labels.instance }} não responde ao scrape há mais de 1 minuto."
+
+  - name: workshop-api-red
+    rules:
+      - alert: TaxaDeErro5xxAlta
+        expr: |
+          sum(rate(workshop_http_requests_total{status_code=~"5.."}[5m]))
+            /
+          clamp_min(sum(rate(workshop_http_requests_total[5m])), 0.001)
+            > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Mais de 5% das requisições retornando erro 5xx"
+          description: "Taxa de erro em {{ $value | humanizePercentage }} nos últimos 5 minutos."
+
+      - alert: LatenciaP95Degradada
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le, endpoint) (rate(workshop_http_request_duration_seconds_bucket[5m]))
+          ) > 0.3
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Latência p95 acima do SLO em {{ $labels.endpoint }}"
+          description: "p95 de {{ $value }}s (SLO: 300 ms) nos últimos 10 minutos."
+
+      - alert: ExcecoesNaoTratadas
+        expr: increase(workshop_http_exceptions_total[10m]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "Exceção não tratada em {{ $labels.endpoint }}"
+          description: "{{ $labels.exception }} ocorreu {{ $value }}x nos últimos 10 minutos."
+
+  - name: workshop-negocio
+    rules:
+      - alert: FalhaNoEnvioDeNotificacoes
+        expr: increase(workshop_notifications_total{result="failed"}[15m]) > 3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Notificações de status falhando"
+          description: >-
+            {{ $value }} falhas de envio pelo canal {{ $labels.channel }} nos últimos 15 minutos.
+            Os clientes podem não estar sendo avisados da mudança de status da OS.
+
+      - alert: NenhumaOsAbertaEmHorarioComercial
+        expr: increase(workshop_service_orders_opened_total[2h]) == 0
+        for: 30m
+        labels:
+          severity: info
+        annotations:
+          summary: "Nenhuma OS aberta nas últimas 2 horas"
+          description: "Pode indicar um problema no fluxo de atendimento ou na integração do balcão."

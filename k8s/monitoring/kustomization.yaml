@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: monitoring
+
+resources:
+  - namespace.yaml
+  - prometheus.yaml
+  - grafana.yaml
+
+# As regras de alerta e o dashboard têm fonte única em /monitoring (compartilhada
+# com o Docker Compose) e são carregadas pelo script de deploy — ver README.md.
+secretGenerator:
+  - name: grafana-admin
+    literals:
+      - username=admin
+      - password=admin # troque em produção: kubectl -n monitoring create secret ...
+
+generatorOptions:
+  disableNameSuffixHash: true
