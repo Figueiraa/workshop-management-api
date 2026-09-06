@@ -8,6 +8,8 @@ data:
   CORS_ORIGINS: "*"
   ALGORITHM: "HS256"
   ACCESS_TOKEN_EXPIRE_MINUTES: "60"
+  # Canal de notificacao de mudanca de status da OS: auto | log | email.
+  NOTIFICATION_CHANNEL: "log"
   # Dados não sensíveis do banco (a senha vai no Secret).
   POSTGRES_DB: "workshop"
   POSTGRES_USER: "workshop"

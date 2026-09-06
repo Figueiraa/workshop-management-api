@@ -7,12 +7,18 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 
-    # Notificações por e-mail (SMTP). Sem SMTP_HOST, cai no notificador de log.
+    # Notificações de mudança de status da OS.
+    # auto  -> e-mail se SMTP_HOST estiver definido, senão log
+    # email -> força o canal de e-mail (SMTP)
+    # log   -> força o canal de log estruturado
+    NOTIFICATION_CHANNEL: str = "auto"
     SMTP_HOST: str | None = None
     SMTP_PORT: int = 587
     SMTP_USER: str | None = None
     SMTP_PASSWORD: str | None = None
     SMTP_FROM: str = "no-reply@workshop.local"
+    SMTP_USE_TLS: bool = True
+    SMTP_TIMEOUT: int = 10
 
     # Observabilidade e segurança HTTP
     LOG_LEVEL: str = "INFO"
