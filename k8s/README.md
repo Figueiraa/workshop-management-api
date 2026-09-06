@@ -1,6 +1,7 @@
 # Manifestos Kubernetes — Workshop Management API
 
-Deploy da aplicação (API + PostgreSQL) no namespace `workshop`, com autoescalonamento (HPA).
+Deploy da aplicação (API + PostgreSQL) no namespace `workshop`, com autoescalonamento (HPA)
+e monitoramento (Prometheus + Grafana) no namespace `monitoring`.
 
 ## Recursos
 
@@ -13,6 +14,7 @@ Deploy da aplicação (API + PostgreSQL) no namespace `workshop`, com autoescalo
 | `deployment.yaml` | Deployment | API (2 réplicas), probes liveness/readiness, initContainer aguardando o DB |
 | `service.yaml` | Service | ClusterIP expondo a API na porta 80 → 8000 |
 | `hpa.yaml` | HorizontalPodAutoscaler | Escala 2→10 réplicas por CPU (70%) e memória (80%) |
+| [`monitoring/`](monitoring/) | Prometheus + Grafana | Stack de observabilidade (namespace `monitoring`) — ver [README](monitoring/README.md) |
 
 ## Pré-requisitos
 
@@ -38,6 +40,17 @@ kubectl apply -f k8s/postgres.yaml
 kubectl apply -f k8s/deployment.yaml -f k8s/service.yaml -f k8s/hpa.yaml
 ```
 
+### Monitoramento (opcional, namespace separado)
+
+```bash
+./k8s/monitoring/deploy.sh      # Linux / macOS / Git Bash
+.\k8s\monitoring\deploy.ps1     # Windows (PowerShell)
+```
+
+Sobe Prometheus + Grafana. O Prometheus descobre os pods da API pelas annotations
+`prometheus.io/scrape` já presentes no `deployment.yaml` — inclusive as réplicas criadas
+pelo HPA durante o teste de carga. Detalhes em [`monitoring/README.md`](monitoring/README.md).
+
 ## Verificar
 
 ```bash
@@ -57,6 +70,23 @@ kubectl -n workshop port-forward svc/workshop-api 8000:80
 ```bash
 kubectl -n workshop get hpa -w
 # Em outro terminal, gere carga (ex.: hey/ab/k6) contra a API e observe as réplicas subirem.
+```
+
+Com o monitoramento no ar, dá para acompanhar o mesmo teste pelos gráficos:
+
+```bash
+kubectl -n monitoring port-forward svc/grafana 3000:3000   # http://localhost:3000
+```
+
+No dashboard **Workshop API — Observabilidade**, a carga aparece em *Requisições por segundo*
+e *Requisições em andamento*; a latência p95 sobe até o HPA adicionar réplicas e volta a cair.
+Os pods novos entram na coleta sozinhos (descoberta por annotations), então nenhuma
+configuração precisa ser tocada durante o teste.
+
+```bash
+# alvos coletados, um por réplica:
+kubectl -n monitoring port-forward svc/prometheus 9090:9090
+curl -s 'http://localhost:9090/api/v1/query?query=count(up{job="workshop-api"})'
 ```
 
 > **Produção:** substitua os valores do `secret.yaml` por segredos reais gerenciados
