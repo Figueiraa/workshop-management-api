@@ -9,6 +9,19 @@ from app.main import app
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 
+def pytest_collection_modifyitems(items):
+    """Marca automaticamente cada teste conforme a pasta (`unit` ou `integration`).
+
+    Permite rodar uma suíte específica: `pytest -m unit` / `pytest -m integration`.
+    """
+    for item in items:
+        path = str(item.fspath).replace("\\", "/")
+        if "/tests/unit/" in path:
+            item.add_marker(pytest.mark.unit)
+        elif "/tests/integration/" in path:
+            item.add_marker(pytest.mark.integration)
+
+
 @pytest.fixture(scope="function")
 def anyio_backend():
     return "asyncio"
