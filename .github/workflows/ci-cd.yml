@@ -9,13 +9,15 @@ on:
 permissions:
   contents: read
   packages: write
+  checks: write
+  pull-requests: write
 
 concurrency:
   group: ci-cd-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  # ─── CI: lint + testes automatizados ────────────────────────────────────────
+  # ─── CI: lint + testes automatizados + análise de segurança ─────────────────
   ci:
     name: Lint & Test
     runs-on: ubuntu-latest
@@ -31,10 +33,30 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Lint (ruff)
-        run: ruff check app tests
+        run: ruff check app tests scripts
 
-      - name: Tests (pytest + coverage gate)
+      - name: Security scan (bandit)
+        run: bandit -r app -f screen -ll
+
+      # Roda as duas suítes juntas para medir a cobertura consolidada; o gate de
+      # 90% está em pytest.ini e reprova o job automaticamente se cair abaixo.
+      - name: Tests (pytest + coverage gate 90%)
         run: pytest
+
+      - name: Coverage summary
+        if: always()
+        run: python scripts/test_report_summary.py >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-and-coverage-reports
+          path: |
+            report/junit.xml
+            coverage.xml
+            htmlcov/
+          retention-days: 30
 
   # ─── Build & push da imagem Docker (somente em push na main) ────────────────
   build:
@@ -74,7 +96,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ─── CD: deploy do banco e dos manifestos no cluster Kubernetes ─────────────
+  # ─── CD: deploy do banco, da aplicação e do monitoramento ──────────────────
   # Habilite definindo a variável de repositório DEPLOY_ENABLED=true e o secret
   # KUBE_CONFIG (kubeconfig em base64). Sem isso, o job é ignorado (pipeline verde).
   deploy:
@@ -105,3 +127,16 @@ jobs:
           kubectl -n workshop rollout status statefulset/workshop-postgres --timeout=180s
           kubectl apply -f k8s/deployment.yaml -f k8s/service.yaml -f k8s/hpa.yaml
           kubectl -n workshop rollout status deployment/workshop-api --timeout=180s
+
+      # Prometheus + Grafana no namespace `monitoring`. O Prometheus descobre os
+      # pods da API pelas annotations prometheus.io/scrape.
+      - name: Deploy monitoring stack (Prometheus + Grafana)
+        run: bash k8s/monitoring/deploy.sh
+
+      - name: Smoke test (health + métricas)
+        run: |
+          kubectl -n workshop port-forward svc/workshop-api 8000:80 &
+          sleep 5
+          curl -fsS http://localhost:8000/health | grep -q '"status":"ok"'
+          curl -fsS http://localhost:8000/metrics | grep -q 'workshop_http_requests_total'
+          echo "Health check e endpoint de métricas respondendo."
